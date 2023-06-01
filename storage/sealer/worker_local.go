@@ -520,6 +520,13 @@ func (l *LocalWorker) ReleaseUnsealed(ctx context.Context, sector storiface.Sect
 			}
 		}
 
+		customKeepUnsealed := os.Getenv("KEEP_UNSEALED")
+		if customKeepUnsealed == "false" {
+			if err := l.storage.Remove(ctx, sector.ID, storiface.FTUnsealed, true, nil); err != nil {
+				return nil, xerrors.Errorf("removing unsealed data: %w", err)
+			}
+		}
+
 		return nil, err
 	})
 }
