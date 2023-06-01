@@ -808,6 +808,11 @@ func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 		return storiface.WorkerInfo{}, xerrors.Errorf("interpreting resource env vars: %w", err)
 	}
 
+	memPhysical = 1099511627776
+	memUsed = 0
+	memSwap = 0
+	memSwapUsed = 0
+
 	return storiface.WorkerInfo{
 		Hostname:        l.name,
 		IgnoreResources: l.ignoreResources,
