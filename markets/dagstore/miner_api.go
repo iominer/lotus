@@ -3,16 +3,15 @@ package dagstore
 import (
 	"context"
 	"fmt"
-
-	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
-
 	"github.com/filecoin-project/dagstore/mount"
 	"github.com/filecoin-project/dagstore/throttle"
 	"github.com/filecoin-project/go-fil-markets/piecestore"
 	"github.com/filecoin-project/go-fil-markets/retrievalmarket"
 	"github.com/filecoin-project/go-fil-markets/shared"
 	"github.com/filecoin-project/go-state-types/abi"
+	"github.com/filecoin-project/lotus/markets/utils"
+	"github.com/ipfs/go-cid"
+	"golang.org/x/xerrors"
 )
 
 //go:generate go run github.com/golang/mock/mockgen -destination=mocks/mock_lotus_accessor.go -package=mock_dagstore . MinerAPI
@@ -31,16 +30,17 @@ type SectorAccessor interface {
 }
 
 type minerAPI struct {
-	pieceStore     piecestore.PieceStore
-	sa             SectorAccessor
-	throttle       throttle.Throttler
-	unsealThrottle throttle.Throttler
-	readyMgr       *shared.ReadyManager
+	pieceStore             piecestore.PieceStore
+	sa                     SectorAccessor
+	throttle               throttle.Throttler
+	unsealThrottle         throttle.Throttler
+	readyMgr               *shared.ReadyManager
+	unsealedFilesystemPath []string
 }
 
 var _ MinerAPI = (*minerAPI)(nil)
 
-func NewMinerAPI(store piecestore.PieceStore, sa SectorAccessor, concurrency int, unsealConcurrency int) MinerAPI {
+func NewMinerAPI(store piecestore.PieceStore, sa SectorAccessor, concurrency int, unsealConcurrency int, unsealedFilesystemPath []string) MinerAPI {
 	var unsealThrottle throttle.Throttler
 	if unsealConcurrency == 0 {
 		unsealThrottle = throttle.Noop()
@@ -48,11 +48,12 @@ func NewMinerAPI(store piecestore.PieceStore, sa SectorAccessor, concurrency int
 		unsealThrottle = throttle.Fixed(unsealConcurrency)
 	}
 	return &minerAPI{
-		pieceStore:     store,
-		sa:             sa,
-		throttle:       throttle.Fixed(concurrency),
-		unsealThrottle: unsealThrottle,
-		readyMgr:       shared.NewReadyManager(),
+		pieceStore:             store,
+		sa:                     sa,
+		throttle:               throttle.Fixed(concurrency),
+		unsealThrottle:         unsealThrottle,
+		readyMgr:               shared.NewReadyManager(),
+		unsealedFilesystemPath: unsealedFilesystemPath,
 	}
 }
 
@@ -61,6 +62,15 @@ func (m *minerAPI) Start(_ context.Context) error {
 }
 
 func (m *minerAPI) IsUnsealed(ctx context.Context, pieceCid cid.Cid) (bool, error) {
+	if len(m.unsealedFilesystemPath) != 0 {
+		for _, ufp := range m.unsealedFilesystemPath {
+			file := fmt.Sprintf("%s/%s.car", ufp, pieceCid.String())
+			if ok, _ := utils.PathExists(file); ok {
+				return true, nil
+			}
+		}
+	}
+
 	err := m.readyMgr.AwaitReady()
 	if err != nil {
 		return false, xerrors.Errorf("failed while waiting for accessor to start: %w", err)
@@ -109,6 +119,16 @@ func (m *minerAPI) IsUnsealed(ctx context.Context, pieceCid cid.Cid) (bool, erro
 }
 
 func (m *minerAPI) FetchUnsealedPiece(ctx context.Context, pieceCid cid.Cid) (mount.Reader, error) {
+	if len(m.unsealedFilesystemPath) != 0 {
+		for _, ufp := range m.unsealedFilesystemPath {
+			file := fmt.Sprintf("%s/%s.car", ufp, pieceCid.String())
+			if ok, _ := utils.PathExists(file); ok {
+				pieceFile := mount.FileMount{Path: file}
+				return pieceFile.Fetch(ctx)
+			}
+		}
+	}
+
 	err := m.readyMgr.AwaitReady()
 	if err != nil {
 		return nil, err

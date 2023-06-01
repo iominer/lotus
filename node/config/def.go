@@ -268,6 +268,7 @@ func DefaultStorageMiner() *StorageMiner {
 			MaxConcurrencyStorageCalls: 100,
 			MaxConcurrentUnseals:       5,
 			GCInterval:                 Duration(1 * time.Minute),
+			UnsealedFilesystemPath:     []string{},
 		},
 	}
 

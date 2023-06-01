@@ -205,6 +205,12 @@ Default value: 100.`,
 representation, e.g. 1m, 5m, 1h.
 Default value: 1 minute.`,
 		},
+		{
+			Name: "UnsealedFilesystemPath",
+			Type: "[]string",
+
+			Comment: `Configure the piece file storage location`,
+		},
 	},
 	"DealmakingConfig": []DocField{
 		{

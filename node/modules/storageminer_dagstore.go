@@ -36,7 +36,7 @@ func NewMinerAPI(cfg config.DAGStoreConfig) func(fx.Lifecycle, repo.LockedRepo, 
 			}
 		}
 
-		mountApi := mdagstore.NewMinerAPI(pieceStore, sa, cfg.MaxConcurrencyStorageCalls, cfg.MaxConcurrentUnseals)
+		mountApi := mdagstore.NewMinerAPI(pieceStore, sa, cfg.MaxConcurrencyStorageCalls, cfg.MaxConcurrentUnseals, cfg.UnsealedFilesystemPath)
 		ready := make(chan error, 1)
 		pieceStore.OnReady(func(err error) {
 			ready <- err

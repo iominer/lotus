@@ -100,6 +100,9 @@ type DAGStoreConfig struct {
 	// representation, e.g. 1m, 5m, 1h.
 	// Default value: 1 minute.
 	GCInterval Duration
+
+	// Configure the piece file storage location
+	UnsealedFilesystemPath []string
 }
 
 type MinerSubsystemConfig struct {
