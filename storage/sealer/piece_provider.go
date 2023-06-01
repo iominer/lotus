@@ -66,16 +66,7 @@ func (p *pieceProvider) IsUnsealed(ctx context.Context, sector storiface.SectorR
 		return false, xerrors.Errorf("acquiring read sector lock: %w", err)
 	}
 
-	exist, err := p.storage.CheckIsUnsealed(ctxLock, sector, abi.PaddedPieceSize(offset.Padded()), size.Padded())
-	if err != nil {
-		return false, err
-	}
-
-	if !exist {
-		exist = true
-	}
-
-	return exist, nil
+	return p.storage.CheckIsUnsealed(ctxLock, sector, abi.PaddedPieceSize(offset.Padded()), size.Padded())
 }
 
 // tryReadUnsealedPiece will try to read the unsealed piece from an existing unsealed sector file for the given sector from any worker that has it.
